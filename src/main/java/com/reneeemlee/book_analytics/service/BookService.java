@@ -8,6 +8,8 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 @Service
@@ -34,41 +36,64 @@ public class BookService {
                         .build(listName))
                 .retrieve()
                 .bodyToMono(NYTBookResponse.class)
-                .flatMap(this::fetchAndAttachBookCovers); // Intercept the response to stitch Google data
+                .flatMap(this::fetchAndAttachBookCovers);
     }
 
-    // Iterates through every book concurrently to look up its cover
     private Mono<NYTBookResponse> fetchAndAttachBookCovers(NYTBookResponse response) {
         if (response.getResults() == null || response.getResults().getBooks() == null) {
             return Mono.just(response);
         }
 
         return Flux.fromIterable(response.getResults().getBooks())
-                .flatMap(book -> fetchBookCoverUrl(book.getIsbn13())
+                .flatMap(book -> fetchCoverForBook(book)
                         .doOnNext(book::setBookImage)
                         .thenReturn(book))
                 .then(Mono.just(response));
     }
 
-    // Calls Google Books API for a specific ISBN and safely parses out the thumbnail string
-    private Mono<String> fetchBookCoverUrl(String isbn) {
-        if (isbn == null || isbn.isBlank()) {
+    private Mono<String> fetchCoverForBook(NYTBookResponse.BookDetail book) {
+        String isbn = book.getIsbn13();
+
+        // 1. Try Google Books by ISBN
+        return queryGoogleBooks("isbn:" + (isbn != null ? isbn : ""))
+                .flatMap(url -> {
+                    if (!url.isBlank()) {
+                        return Mono.just(url);
+                    }
+                    // 2. Try Google Books by Title + Author
+                    String cleanTitle = book.getTitle() != null ? book.getTitle() : "";
+                    String cleanAuthor = book.getAuthor() != null ? book.getAuthor() : "";
+                    return queryGoogleBooks(cleanTitle + " " + cleanAuthor);
+                })
+                .flatMap(url -> {
+                    if (!url.isBlank()) {
+                        return Mono.just(url);
+                    }
+                    // 3. Guaranteed Fallback: Open Library CDN direct image URL
+                    if (isbn != null && !isbn.isBlank()) {
+                        return Mono.just("https://covers.openlibrary.org/b/isbn/" + isbn + "-L.jpg");
+                    }
+                    return Mono.just("");
+                });
+    }
+
+    private Mono<String> queryGoogleBooks(String searchTerm) {
+        if (searchTerm == null || searchTerm.trim().isBlank()) {
             return Mono.just("");
         }
 
+        String encodedQuery = URLEncoder.encode(searchTerm.trim(), StandardCharsets.UTF_8);
+
         return this.googleBooksWebClient.get()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/volumes")
-                        .queryParam("q", "isbn:" + isbn)
-                        .build())
-                .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)") // Helps prevent Google throttling
+                .uri("/volumes?q=" + encodedQuery + "&maxResults=1")
+                .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)")
                 .retrieve()
                 .bodyToMono(Map.class)
                 .map(this::extractThumbnailFromGoogleMap)
-                .onErrorReturn(""); // Fail silently if cover isn't found
+                .doOnError(err -> System.err.println("Google Books API fetch notice: " + err.getMessage()))
+                .onErrorReturn("");
     }
 
-    // Safe parsing helper to navigate Google's deeply nested JSON map structure
     @SuppressWarnings("unchecked")
     private String extractThumbnailFromGoogleMap(Map rawMap) {
         try {
@@ -79,15 +104,14 @@ public class BookService {
                     var imageLinks = (Map) volumeInfo.get("imageLinks");
                     if (imageLinks != null) {
                         String thumbnail = (String) imageLinks.get("thumbnail");
-                        if (thumbnail != null) {
-                            // Fixes browser mixed-content blocks by forcing secure links
+                        if (thumbnail != null && !thumbnail.isBlank()) {
                             return thumbnail.replace("http://", "https://");
                         }
                     }
                 }
             }
         } catch (Exception e) {
-            // Log or ignore extraction problems
+            // Silently fall through
         }
         return "";
     }

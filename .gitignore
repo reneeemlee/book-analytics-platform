@@ -45,3 +45,6 @@ build/
 *.rar
 hs_err_pid*
 replay_pid*
+
+# macOS
+.DS_Store

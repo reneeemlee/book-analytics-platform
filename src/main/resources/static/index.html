@@ -134,6 +134,7 @@
             border-radius: 1px;
             letter-spacing: 0.5px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+            z-index: 2;
         }
 
         .no-cover {
@@ -387,7 +388,7 @@
                     card.setAttribute('onclick', `openBookModal(${index})`);
                     
                     const coverHtml = book.bookImage 
-                        ? `<img src="${book.bookImage}" alt="${book.title} cover" class="cover-img">`
+                        ? `<img src="${book.bookImage}" alt="${book.title} cover" class="cover-img" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'no-cover\\'>${toTitleCase(book.title)}</div>';">`
                         : `<div class="no-cover">${toTitleCase(book.title)}</div>`;
 
                     card.innerHTML = `
@@ -417,7 +418,7 @@
             
             const leftPane = document.getElementById('modalLeft');
             leftPane.innerHTML = book.bookImage 
-                ? `<img src="${book.bookImage}" class="modal-cover" alt="Cover">`
+                ? `<img src="${book.bookImage}" class="modal-cover" alt="Cover" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'cover-wrapper\\' style=\\'box-shadow:none;\\'><div class=\\'no-cover\\'>No Cover</div></div>';">`
                 : `<div class="cover-wrapper" style="box-shadow:none;"><div class="no-cover">No Cover</div></div>`;
 
             detailModal.classList.add('active');

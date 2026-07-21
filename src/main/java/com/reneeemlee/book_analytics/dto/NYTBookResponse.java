@@ -7,7 +7,10 @@ import java.util.List;
 @Data
 public class NYTBookResponse {
     private String status;
-    private int num_result; 
+    
+    @JsonProperty("num_results")
+    private int numResults; 
+    
     private ListResult results;
 
     @Data
@@ -30,17 +33,9 @@ public class NYTBookResponse {
         private String publisher;
 
         @JsonProperty("primary_isbn13")
-        private String primaryIsbn13;
+        private String isbn13;
 
+        @JsonProperty("bookImage")
         private String bookImage;
-
-        // Convenient helper getter for frontend & service
-        public String getIsbn13() {
-            return primaryIsbn13;
-        }
-
-        public void setIsbn13(String isbn13) {
-            this.primaryIsbn13 = isbn13;
-        }
     }
 }
