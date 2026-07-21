@@ -36,7 +36,7 @@ This application demonstrates a reactive, non-blocking pipeline using **Spring W
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```text
 book-analytics/
