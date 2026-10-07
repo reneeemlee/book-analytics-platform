@@ -13,7 +13,7 @@ This application demonstrates a reactive, non-blocking pipeline using **Spring W
 
 1. **Category Retrieval:** Fetches available NYT Bestseller categories via a custom controller endpoint.
 2. **Concurrent API Stitching:** Requests the current bestsellers for a selected list from the NYT API,
-   then concurrently queries the Google Books API for cover thumbnails using `Flux` stream operators.
+   then concurrently queries the Google Books API for cover thumbnails.
 4. **Resilient Cover Discovery:** Implements a three-tier fallback mechanism to ensure maximum image
    coverage across all book titles:
    - **Tier 1:** Exact ISBN-13 match via Google Books.
