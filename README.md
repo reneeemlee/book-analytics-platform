@@ -1,5 +1,7 @@
 # NYT Bestsellers Analytics Platform
 
+Pulling real-time data about New York Times Bestselling books in four different categories, for your visual analysis and recommendation.
+
 A full-stack, reactive Java web application built with **Spring Boot 3 (WebFlux)**. 
 The platform dynamically merges real-time bestseller data from the **New York Times Books API** with visual 
 metadata and high-resolution cover art from the **Google Books API** and **Open Library CDN**.
